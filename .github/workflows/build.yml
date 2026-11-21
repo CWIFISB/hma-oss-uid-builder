@@ -81,8 +81,9 @@ jobs:
           ./gradlew :zygote:assemble --no-daemon
           REL=$(ls zygote/build/outputs/magisk/release/*.zip | head -1)
           DBG=$(ls zygote/build/outputs/magisk/debug/*.zip | head -1)
-          echo "rel=$REL" >> "$GITHUB_OUTPUT"
-          echo "dbg=$DBG" >> "$GITHUB_OUTPUT"
+          # upload-artifact runs at repo root, source lives under src/
+          echo "rel=src/$REL" >> "$GITHUB_OUTPUT"
+          echo "dbg=src/$DBG" >> "$GITHUB_OUTPUT"
           echo "name=$(basename "$REL" .zip)" >> "$GITHUB_OUTPUT"
 
       - name: Collect manager apk

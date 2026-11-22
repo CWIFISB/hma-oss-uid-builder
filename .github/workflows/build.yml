@@ -92,13 +92,14 @@ jobs:
           DBG=$(ls zygote/build/outputs/magisk/debug/*.zip | head -1)
           # Overlay the reviewed ARM64-only installer, inject the migration
           # payload, regenerate the checksum manifest, and emit the final zip.
-          OUT="$PWD/$(dirname "$RAW")/$(basename "$RAW" .zip).zip"
+          TMP="$RAW.tmp.zip"
           python3 tools/finalize_module.py \
             --zip "$RAW" \
             --helper build/migration/helper.dex \
             --cert build/migration/manager-cert.der \
-            --output "$OUT"
-          REL="$OUT"
+            --output "$TMP"
+          mv -f "$TMP" "$RAW"
+          REL="$RAW"
           # upload-artifact runs at repo root, source lives under src/
           echo "rel=src/$REL" >> "$GITHUB_OUTPUT"
           echo "dbg=src/$DBG" >> "$GITHUB_OUTPUT"

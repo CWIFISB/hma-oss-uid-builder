@@ -68,6 +68,15 @@ jobs:
           echo "fileDir=$(pwd)/key.jks" >> local.properties
           echo "${KEY_STORE}" | base64 --decode > key.jks
 
+      - name: Prepare migration payload
+        env:
+          STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_ALIAS:      ${{ secrets.ALIAS }}
+        run: |
+          cd src
+          KEY_STORE_PASSWORD="$STORE_PASSWORD" bash tools/prepare_migration.sh "$KEY_ALIAS"
+      - name: Host unit tests
+        run: bash src/tools/run_tests.sh
       - name: Prebuild
         run: cd src && ./gradlew prebuild --no-daemon
 
@@ -79,8 +88,17 @@ jobs:
         run: |
           cd src
           ./gradlew :zygote:assemble --no-daemon
-          REL=$(ls zygote/build/outputs/magisk/release/*.zip | head -1)
+          RAW=$(ls zygote/build/outputs/magisk/release/*.zip | head -1)
           DBG=$(ls zygote/build/outputs/magisk/debug/*.zip | head -1)
+          # Overlay the reviewed ARM64-only installer, inject the migration
+          # payload, regenerate the checksum manifest, and emit the final zip.
+          OUT="$PWD/$(dirname "$RAW")/$(basename "$RAW" .zip).zip"
+          python3 tools/finalize_module.py \
+            --zip "$RAW" \
+            --helper build/migration/helper.dex \
+            --cert build/migration/manager-cert.der \
+            --output "$OUT"
+          REL="$OUT"
           # upload-artifact runs at repo root, source lives under src/
           echo "rel=src/$REL" >> "$GITHUB_OUTPUT"
           echo "dbg=src/$DBG" >> "$GITHUB_OUTPUT"
